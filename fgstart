@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# A CLI launcher for FlightGear.
+# Copyright (c) 2022 Tobias Dammers.
+# See attached COPYING file for license information.
+# SPDX: MIT
+
 export OSG_NUM_DATABASE_THREADS=5
 export OSG_NUM_HTTP_DATABASE_THREADS=5
 export OSG_COMPILE_CONTEXTS=on
@@ -20,7 +25,7 @@ USE_GDB=""
 OPENTRACK=""
 TELNET=""
 SIMBRIEF=""
-CUSTOM_COMMANDS=""
+CUSTOM_OPTIONS=""
 AIRFRAME=""
 ACTYPE=""
 TIMEOFDAY="clock"
@@ -199,7 +204,7 @@ COMMAND="$FGFS \
             --httpd=10000 \
             --fov=70.8 \
             --disable-ai-traffic \
-            $CUSTOM_COMMANDS \
+            $CUSTOM_OPTIONS \
             --enable-ai-models \
             --prop:/sim/rendering/use-vbos=true"
 
@@ -500,7 +505,7 @@ case "$ACTION" in
         echo "$COMMAND"
         ;;
     run)
-        jscal.sh
+        $PRERUN
         $COMMAND
         ;;
     show-aircraft)

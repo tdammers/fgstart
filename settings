@@ -1,13 +1,33 @@
-CUSTOM_COMMANDS=--allow-nasal-read=/home/tobias/flightgear/joystick-conf
+# Additional shell commands to run before launching FGFS
+PRERUN=jscal.sh
+
+# Custom options to append to `fgfs` command
+CUSTOM_OPTIONS=--allow-nasal-read=/home/tobias/flightgear/joystick-conf
+
+# Locations of custom scenery
 CUSTOM_SCENERY_PATHS="/home/tobias/flightgear/fgdata-standalone/Navaids /home/tobias/flightgear/fgdata-standalone/Scenery/*"
+
+# Path to terragit root
 TERRAGIT_PATH=$HOME/flightgear/terraGIT
+
+# Path to WS1.0 scenery
 SCENERY_1_PATH=$HOME/flightgear/fgdata-standalone/fg-scenery-1.0
+
+# Path to photoscenery
+PHOTOSCENERY_DIR=$HOME/flightgear/photoscenery
+
+# Paths to search for aircraft models
 AIRCRAFT_PATHS="\
     $HOME/flightgear/fgdata-standalone/Aircraft \
     $HOME/flightgear/fgdata-next/Aircraft \
     $HOME/.fgfs/Aircraft/org.flightgear.fgaddon/Aircraft"
+
+# XML configuration files
 DEFAULT_CONFIG_XML=$HOME/flightgear/config/config.xml
 MULTIMON_CONFIG_XML=$HOME/flightgear/config/multimon1.xml
-PHOTOSCENERY_DIR=$HOME/flightgear/photoscenery
+
+# Paths to addons to be loaded
 ADDONS=/home/tobias/flightgear/addons/*
+
+# Username for SimBrief import
 SIMBRIEF_USER=tdammers
