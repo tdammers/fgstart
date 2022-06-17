@@ -19,12 +19,19 @@ LOG_LEVEL=
 USE_GDB=""
 OPENTRACK=""
 TELNET=""
+SIMBRIEF=""
+CUSTOM_COMMANDS=""
+AIRFRAME=""
+ACTYPE=""
+TIMEOFDAY="clock"
 
 ANTIALIAS=1
 REMBRANDT=0
 HDR=0
 
 export __GL_SYNC_TO_VBLANK=1
+
+. $HOME/.config/fgstart/settings
 
 while [[ "$1" != "" ]]
 do
@@ -46,6 +53,17 @@ do
         --aircraft)
             shift
             AIRCRAFT="$1"
+            ;;
+        --airframe)
+            shift
+            AIRFRAME="$1"
+            ;;
+        --type)
+            shift
+            ACTYPE="$1"
+            ;;
+        --simbrief)
+            SIMBRIEF=1
             ;;
         --parkpos)
             shift
@@ -139,15 +157,51 @@ do
     shift
 done
 
-PHOTOSCENERY_DIR=/home/tobias/flightgear/photoscenery
+# SIMBRIEF
+if [ "$SIMBRIEF" == "1" ]
+then
+    SIMBRIEF_FILENAME=$HOME/tmp/simbrief.xml
+    (curl "https://www.simbrief.com/api/xml.fetcher.php?username=$SIMBRIEF_USER" || exit -1) > "$SIMBRIEF_FILENAME"
+    CALLSIGN=$(xmlstarlet sel -t -m '/' -v '/OFP/atc/callsign' "$SIMBRIEF_FILENAME")
+    AIRFRAME=$(xmlstarlet sel -t -m '/' -v '/OFP/aircraft/reg' "$SIMBRIEF_FILENAME")
+    ACTYPE=$(xmlstarlet sel -t -m '/' -v '/OFP/aircraft/icaocode' "$SIMBRIEF_FILENAME")
+    AIRPORT=$(xmlstarlet sel -t -m '/' -v '/OFP/origin/icao_code' "$SIMBRIEF_FILENAME")
+
+    echo "--- SIMBRIEF ---"
+    echo "CALLSIGN: $CALLSIGN"
+    echo "AIRFRAME: $AIRFRAME"
+    echo "ACTYPE: $ACTYPE"
+    echo "AIRPORT: $AIRPORT"
+fi
+
+# Resolve airframe
+if [ "$AIRFRAME" != "" ]
+then
+    AIRFRAME_FILE=$HOME/.config/fgstart/fleet/airframes/$AIRFRAME
+    if [[ -e "$AIRFRAME_FILE" ]]
+    then
+        . "$AIRFRAME_FILE"
+    fi
+fi
+
+# Resolve type
+if [ "$ACTYPE" != "" ]
+then
+    ACTYPE_FILE=$HOME/.config/fgstart/fleet/types/$ACTYPE
+    if [[ -e "$ACTYPE_FILE" ]]
+    then
+        . "$ACTYPE_FILE"
+    fi
+fi
 
 # Base command with Phi enabled and the usual settings.
 COMMAND="$FGFS \
             --httpd=10000 \
             --fov=70.8 \
             --disable-ai-traffic \
-            --allow-nasal-read=/home/tobias/flightgear/joystick-conf \
-            --enable-ai-models"
+            $CUSTOM_COMMANDS \
+            --enable-ai-models \
+            --prop:/sim/rendering/use-vbos=true"
 
 # if [ "$FGNEXT" == "1" ]
 # then
@@ -173,7 +227,7 @@ fi
 
 if [ "$ADDONS" == "1" ]
 then
-    for DIR in /home/tobias/flightgear/addons/*
+    for DIR in $ADDONS
     do
         echo "$DIR"
         COMMAND="$COMMAND --addon=$DIR"
@@ -193,7 +247,7 @@ fi
 if [ "$EXTRA_SCENERY" == "1" ]
 then
     # Use additional scenery
-    for DIR in /home/tobias/flightgear/fgdata-standalone/Navaids /home/tobias/flightgear/fgdata-standalone/Scenery/*
+    for DIR in $CUSTOM_SCENERY_PATHS
     do
         SCENERY_PATHS="$SCENERY_PATHS:$DIR"
     done
@@ -205,8 +259,8 @@ DEF_SCENERY_PATH="$HOME/.fgfs/TerraSync"
 case $SCENERY in
     terragit)
         # Use TerraGIT
-        SCENERY_PATHS="$SCENERY_PATHS:$HOME/flightgear/terraGIT"
-        DEF_SCENERY_PATH="$HOME/flightgear/terraGIT"
+        SCENERY_PATHS="$SCENERY_PATHS:$TERRAGIT_PATH"
+        DEF_SCENERY_PATH="$TERRAGIT_PATH"
         # Don't use TerraSync
         COMMAND="$COMMAND --disable-terrasync"
         ;;
@@ -217,8 +271,8 @@ case $SCENERY in
         ;;
     1.0)
         # Use 1.0 scenery
-        SCENERY_PATHS="$SCENERY_PATHS:$HOME/flightgear/fgdata-standalone/fg-scenery-1.0"
-        DEF_SCENERY_PATH="$HOME/flightgear/fgdata-standalone/fg-scenery-1.0"
+        SCENERY_PATHS="$SCENERY_PATHS:$SCENERY_1_PATH"
+        DEF_SCENERY_PATH="$SCENERY_1_PATH"
         # Don't use TerraSync
         COMMAND="$COMMAND --disable-terrasync"
         ;;
@@ -312,7 +366,7 @@ EOT
 
     if [[ "$PARKPOS" == "" ]] && [[ "$RUNWAY" == "" ]]
     then
-        echo "$PARKINGS"
+        echo "$PARKINGS" | column
         read -p 'Parkpos? ' PARKPOS
         if [[ "$PARKPOS" == "" ]]
         then
@@ -331,11 +385,10 @@ EOT
 fi
 
 # Additional aircraft
-COMMAND="$COMMAND \
-            --fg-aircraft=/home/tobias/flightgear/fgdata-standalone/Aircraft \
-            --fg-aircraft=/home/tobias/flightgear/fgdata-next/Aircraft \
-            --fg-aircraft=/home/tobias/.fgfs/Aircraft/org.flightgear.fgaddon/Aircraft \
-            --prop:/sim/rendering/use-vbos=true"
+for AIRCRAFT_PATH in $AIRCRAFT_PATHS
+do
+    COMMAND="$COMMAND --fg-aircraft=$AIRCRAFT_PATH"
+done
 
 if [ "$ACTION" != "show-aircraft" ]
 then
@@ -434,10 +487,10 @@ then
     fi
 fi
 
-COMMAND="$COMMAND --config=/home/tobias/flightgear/config/config.xml"
+COMMAND="$COMMAND --config=$DEFAULT_CONFIG_XML"
 if [ "$MULTIMON" != "" ]
 then
-    COMMAND="$COMMAND --config=/home/tobias/flightgear/config/multimon1.xml"
+    COMMAND="$COMMAND --config=$MULTIMON_CONFIG_XML"
 fi
 
 COMMAND="$COMMAND $FG_EXTRA_OPTS"

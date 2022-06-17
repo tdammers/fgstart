@@ -1,0 +1,13 @@
+CUSTOM_COMMANDS=--allow-nasal-read=/home/tobias/flightgear/joystick-conf
+CUSTOM_SCENERY_PATHS="/home/tobias/flightgear/fgdata-standalone/Navaids /home/tobias/flightgear/fgdata-standalone/Scenery/*"
+TERRAGIT_PATH=$HOME/flightgear/terraGIT
+SCENERY_1_PATH=$HOME/flightgear/fgdata-standalone/fg-scenery-1.0
+AIRCRAFT_PATHS="\
+    $HOME/flightgear/fgdata-standalone/Aircraft \
+    $HOME/flightgear/fgdata-next/Aircraft \
+    $HOME/.fgfs/Aircraft/org.flightgear.fgaddon/Aircraft"
+DEFAULT_CONFIG_XML=$HOME/flightgear/config/config.xml
+MULTIMON_CONFIG_XML=$HOME/flightgear/config/multimon1.xml
+PHOTOSCENERY_DIR=$HOME/flightgear/photoscenery
+ADDONS=/home/tobias/flightgear/addons/*
+SIMBRIEF_USER=tdammers
