@@ -1,0 +1,459 @@
+#!/bin/bash
+
+export OSG_NUM_DATABASE_THREADS=5
+export OSG_NUM_HTTP_DATABASE_THREADS=5
+export OSG_COMPILE_CONTEXTS=on
+export OSG_GL_TEXTURE_STORAGE=on
+export OSG_OPTIMIZER=REMOVE_REDUNDANT_NODES
+
+export __GL_THREADED_OPTIMIZATIONS=1
+
+ACTION=run
+SCENERY=terrasync
+PHOTOSCENERY=""
+EXTRA_SCENERY="1"
+ADDONS="1"
+THREADING=MULTI
+FGFS=fgfs
+LOG_LEVEL=
+USE_GDB=""
+OPENTRACK=""
+TELNET=""
+
+ANTIALIAS=1
+REMBRANDT=0
+HDR=0
+
+export __GL_SYNC_TO_VBLANK=1
+
+while [[ "$1" != "" ]]
+do
+    case "$1" in
+        --fgfs)
+            shift
+            FGFS="$1"
+            ;;
+        --dump)
+            ACTION=dump
+            ;;
+        --show-aircraft)
+            ACTION=show-aircraft
+            ;;
+        --airport)
+            shift
+            AIRPORT="$1"
+            ;;
+        --aircraft)
+            shift
+            AIRCRAFT="$1"
+            ;;
+        --parkpos)
+            shift
+            PARKPOS="$1"
+            ;;
+        --runway)
+            shift
+            RUNWAY="$1"
+            ;;
+        --scenery)
+            shift
+            SCENERY="$1"
+            ;;
+        --photoscenery)
+            PHOTOSCENERY=1
+            ;;
+        --hdr)
+            HDR=1
+            ;;
+        --time)
+            shift
+            TIMEOFDAY="$1"
+            ;;
+        --callsign)
+            shift
+            CALLSIGN="$1"
+            ;;
+        --mpserver)
+            shift
+            MPSERVER="mpserver$1.flightgear.org"
+            ;;
+        --multimon)
+            MULTIMON=1
+            ;;
+        --singlethreaded)
+            THREADING=SINGLE
+            ;;
+        --multithreaded)
+            THREADING=MULTI
+            ;;
+        --multithreaded2)
+            THREADING=MULTI2
+            ;;
+        --antialias)
+            shift
+            ANTIALIAS="$1"
+            ;;
+        --extra-scenery)
+            EXTRA_SCENERY="1"
+            ;;
+        --no-extra-scenery)
+            EXTRA_SCENERY="0"
+            ;;
+        --addons)
+            ADDONS="1"
+            ;;
+        --no-addons)
+            ADDONS="0"
+            ;;
+
+        --rembrandt)
+            REMBRANDT=1
+            ;;
+
+        --compositor)
+            COMPOSITOR=1
+            ;;
+
+        --log-level)
+            shift
+            LOG_LEVEL="$1"
+            ;;
+
+        --gdb)
+            USE_GDB="1"
+            ;;
+        
+        --headtrack)
+            OPENTRACK="1"
+            ;;
+
+        --telnet)
+            TELNET="1"
+            ;;
+
+        *)
+            echo "Invalid option $1" >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+PHOTOSCENERY_DIR=/home/tobias/flightgear/photoscenery
+
+# Base command with Phi enabled and the usual settings.
+COMMAND="$FGFS \
+            --httpd=10000 \
+            --fov=70.8 \
+            --disable-ai-traffic \
+            --allow-nasal-read=/home/tobias/flightgear/joystick-conf \
+            --enable-ai-models"
+
+# if [ "$FGNEXT" == "1" ]
+# then
+#     COMMAND="$COMMAND --composite-viewer=0 "
+# fi
+
+if [ "$TELNET" == "1" ]
+then
+    COMMAND="$COMMAND --telnet=10001 --allow-nasal-from-sockets"
+fi
+
+if [ "$USE_GDB" == "1" ]
+then
+    COMMAND="gdb -q -n -batch -ex 'handle SIGTSTP nostop' -ex 'handle SIGCONT nostop' -ex 'handle SIGHUP nostop nopass' -ex 'handle SIGPIPE nostop' -ex 'handle 32 pass nostop noprint' -ex r -ex 'thread apply all bt' -ex where --args $COMMAND"
+fi
+
+SCENERY_PATHS=""
+
+if [ "$LOG_LEVEL" != "" ]
+then
+    COMMAND="$COMMAND --log-level=$LOG_LEVEL"
+fi
+
+if [ "$ADDONS" == "1" ]
+then
+    for DIR in /home/tobias/flightgear/addons/*
+    do
+        echo "$DIR"
+        COMMAND="$COMMAND --addon=$DIR"
+    done
+fi
+
+if [ "$OPENTRACK" == "1" ]
+then
+    COMMAND="$COMMAND --generic=socket,in,25,127.0.0.1,5542,udp,opentrack"
+fi
+
+if [ "$PHOTOSCENERY" == "1" ]
+then
+    SCENERY_PATHS="$SCENERY_PATHS:$PHOTOSCENERY_DIR"
+fi
+
+if [ "$EXTRA_SCENERY" == "1" ]
+then
+    # Use additional scenery
+    for DIR in /home/tobias/flightgear/fgdata-standalone/Navaids /home/tobias/flightgear/fgdata-standalone/Scenery/*
+    do
+        SCENERY_PATHS="$SCENERY_PATHS:$DIR"
+    done
+fi
+
+
+DEF_SCENERY_PATH="$HOME/.fgfs/TerraSync"
+
+case $SCENERY in
+    terragit)
+        # Use TerraGIT
+        SCENERY_PATHS="$SCENERY_PATHS:$HOME/flightgear/terraGIT"
+        DEF_SCENERY_PATH="$HOME/flightgear/terraGIT"
+        # Don't use TerraSync
+        COMMAND="$COMMAND --disable-terrasync"
+        ;;
+    terrasync)
+        SCENERY_PATHS="$SCENERY_PATHS:$HOME/.fgfs/TerraSync"
+        # Use TerraSync
+        COMMAND="$COMMAND --enable-terrasync"
+        ;;
+    1.0)
+        # Use 1.0 scenery
+        SCENERY_PATHS="$SCENERY_PATHS:$HOME/flightgear/fgdata-standalone/fg-scenery-1.0"
+        DEF_SCENERY_PATH="$HOME/flightgear/fgdata-standalone/fg-scenery-1.0"
+        # Don't use TerraSync
+        COMMAND="$COMMAND --disable-terrasync"
+        ;;
+    none)
+        # Don't use any particular scenery
+        # Don't use TerraSync
+        COMMAND="$COMMAND --disable-terrasync"
+        ;;
+    terrasync-existing)
+        SCENERY_PATHS="$SCENERY_PATHS:$HOME/.fgfs/TerraSync"
+        # Use TerraSync
+        COMMAND="$COMMAND --disable-terrasync"
+        ;;
+esac
+
+SCENERY_PATHS="$(echo "$SCENERY_PATHS" | sed -e 's/^://')"
+
+COMMAND="$COMMAND --fg-scenery=$SCENERY_PATHS"
+
+if [ "$HDR" == "1" ]
+then
+    COMMAND="$COMMAND --compositor=/Compositor/HDR/hdr"
+fi
+
+
+if [ "$ACTION" != "show-aircraft" ]
+then
+    if [[ "$AIRPORT" == "" ]]
+    then
+        read -p 'Airport? ' AIRPORT
+    fi
+
+    C1=$(echo "$AIRPORT" | cut -c 1)
+    C2=$(echo "$AIRPORT" | cut -c 2)
+    C3=$(echo "$AIRPORT" | cut -c 3)
+
+    PARKINGS_XSL=$(cat <<EOT
+<?xml version="1.0" ?>
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+    <xsl:output method="text"/>
+    <xsl:template match="/">
+        <xsl:call-template name="main" />
+    </xsl:template>
+    <xsl:template name="main">
+        <xsl:for-each select="//Parking">
+            <xsl:value-of select="@name" />
+            <xsl:value-of select="@number" />
+            <xsl:text>&#xa;</xsl:text>
+        </xsl:for-each>
+    </xsl:template>
+</xsl:stylesheet>
+EOT
+    )
+
+    PARKINGS=$(\
+        (for SCENERY_PATH in $(echo $SCENERY_PATHS|tr ':' '\n');
+        do
+            GROUNDNET_FILE="$SCENERY_PATH/Airports/$C1/$C2/$C3/$AIRPORT.groundnet.xml"
+            if [[ -e "$GROUNDNET_FILE" ]]
+            then
+                xmlstarlet \
+                    tr <(echo "$PARKINGS_XSL") \
+                    "$GROUNDNET_FILE"
+                break
+            fi
+        done <<< "$SCENERY_PATHS") | sort -u
+        )
+
+    RUNWAYS_XSL=$(cat <<EOT
+<?xml version="1.0" ?>
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+    <xsl:output method="text"/>
+    <xsl:template match="/">
+        <xsl:call-template name="main" />
+    </xsl:template>
+    <xsl:template name="main">
+        <xsl:for-each select="//threshold">
+            <xsl:value-of select="rwy" />
+            <xsl:text>&#xa;</xsl:text>
+        </xsl:for-each>
+    </xsl:template>
+</xsl:stylesheet>
+EOT
+    )
+
+    RUNWAYS=$(\
+        xmlstarlet \
+            tr <(echo "$RUNWAYS_XSL") \
+            "$DEF_SCENERY_PATH/Airports/$C1/$C2/$C3/$AIRPORT.threshold.xml"
+        )
+
+    if [[ "$PARKPOS" == "" ]] && [[ "$RUNWAY" == "" ]]
+    then
+        echo "$PARKINGS"
+        read -p 'Parkpos? ' PARKPOS
+        if [[ "$PARKPOS" == "" ]]
+        then
+            echo "$RUNWAYS"
+            read -p 'Runway? ' RUNWAY
+        elif [[ "$PARKPOS" =~ ^[1-0][0-9]*$ ]]
+        then
+            PARKPOS=$(echo "$PARKINGS" | head -n$PARKPOS | tail -n1)
+        fi
+    fi
+
+    if [[ "$AIRCRAFT" == "" ]]; then read -p 'Aircraft? ' AIRCRAFT; fi
+    if [[ "$TIMEOFDAY" == "" ]]; then read -p 'Time? ' TIMEOFDAY; fi
+    if [[ "$CALLSIGN" == "" ]]; then read -p 'Callsign? ' CALLSIGN; fi
+    if [[ "$MPSERVER" == "" ]]; then echo 'Not connecting to multiplayer network'; fi
+fi
+
+# Additional aircraft
+COMMAND="$COMMAND \
+            --fg-aircraft=/home/tobias/flightgear/fgdata-standalone/Aircraft \
+            --fg-aircraft=/home/tobias/flightgear/fgdata-next/Aircraft \
+            --fg-aircraft=/home/tobias/.fgfs/Aircraft/org.flightgear.fgaddon/Aircraft \
+            --prop:/sim/rendering/use-vbos=true"
+
+if [ "$ACTION" != "show-aircraft" ]
+then
+    case "$THREADING" in
+        SINGLE)
+            export OSG_NUM_DATABASE_THREADS=1
+            export OSG_NUM_HTTP_DATABASE_THREADS=1
+            export __GL_THREADED_OPTIMIZATIONS=0
+            COMMAND="$COMMAND \
+                        --prop:/sim/rendering/multithreading-mode=SingleThreaded \
+                        --prop:/sim/nasal-gc-threaded=false"
+            ;;
+        MULTI2)
+            COMMAND="$COMMAND \
+                        --prop:/sim/rendering/multithreading-mode=CullThreadPerCameraDrawThreadPerContext \
+                        --prop:/sim/nasal-gc-threaded=false"
+            ;;
+        *)
+            COMMAND="$COMMAND \
+                        --prop:/sim/rendering/multithreading-mode=CullDrawThreadPerContext \
+                        --prop:/sim/nasal-gc-threaded=false"
+            ;;
+    esac
+
+    case "$ANTIALIAS" in
+        "[2-4]")
+            # FG handles AA
+            COMMAND="$COMMAND \
+                    --prop:/sim/rendering/multi-sample-buffers=true \
+                    --prop:/sim/rendering/multi-samples=$ANTIALIAS"
+            export __GL_FSAA_MODE=0
+            export __GL_LOG_MAX_ANISO=0
+            ;;
+        *)
+            COMMAND="$COMMAND \
+                    --prop:/sim/rendering/multi-sample-buffers=false \
+                    --prop:/sim/rendering/multi-samples=1"
+            case "$ANTIALIAS" in
+                off)
+                    export __GL_FSAA_MODE=0
+                    export __GL_LOG_MAX_ANISO=1
+                    ;;
+                lo)
+                    export __GL_FSAA_MODE=1
+                    export __GL_LOG_MAX_ANISO=0
+                    ;;
+                hi)
+                    export __GL_FSAA_MODE=10
+                    export __GL_LOG_MAX_ANISO=2
+                    ;;
+                *)
+                    # reasonable defaults
+                    export __GL_FSAA_MODE=5
+                    export __GL_LOG_MAX_ANISO=1
+                    ;;
+            esac
+            ;;
+    esac
+
+    if [[ "$COMPOSITOR" == "1" ]]
+    then
+        COMMAND="$COMMAND --compositor=Compositor/als"
+        COMMAND="$COMMAND --prop:bool:/sim/rendering/als/shadows/enabled=true"
+    fi
+
+    # tweak some rendering settings
+    COMMAND="$COMMAND --prop:/sim/rendering/max-paged-lod=200 --prop:/sim/rendering/plod-minimum-expiry-time-secs=30"
+    COMMAND="$COMMAND --prop:int:/sim/rendering/shadows/map-size=8192"
+
+    # Now compose the dynamic part of the command
+    COMMAND="$COMMAND \
+                --aircraft=$AIRCRAFT"
+
+    if [ "$AIRPORT" != "" ]
+    then
+        COMMAND="$COMMAND --airport=$AIRPORT"
+        if [ "$PARKPOS" != "" ]
+        then
+            COMMAND="$COMMAND --parkpos=$PARKPOS"
+        elif [ "$RUNWAY" != "" ]
+        then
+            COMMAND="$COMMAND --runway=$RUNWAY"
+        fi
+    fi
+    if [ "$TIMEOFDAY" != "" ]
+    then
+        COMMAND="$COMMAND --timeofday=$TIMEOFDAY"
+    fi
+    if [ "$CALLSIGN" != "" ]
+    then
+        COMMAND="$COMMAND --callsign=$CALLSIGN"
+    fi
+    if [ "$MPSERVER" != "" ]
+    then
+        COMMAND="$COMMAND --multiplay=out,10,5000,$MPSERVER --multiplay=in,10,,5000"
+    fi
+fi
+
+COMMAND="$COMMAND --config=/home/tobias/flightgear/config/config.xml"
+if [ "$MULTIMON" != "" ]
+then
+    COMMAND="$COMMAND --config=/home/tobias/flightgear/config/multimon1.xml"
+fi
+
+COMMAND="$COMMAND $FG_EXTRA_OPTS"
+
+case "$ACTION" in
+    dump)
+        echo "$COMMAND"
+        ;;
+    run)
+        jscal.sh
+        $COMMAND
+        ;;
+    show-aircraft)
+        $COMMAND --show-aircraft
+        ;;
+    *)
+        echo "invalid command: $COMMAND"
+        ;;
+esac
