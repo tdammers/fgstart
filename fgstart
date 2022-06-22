@@ -232,7 +232,7 @@ fi
 
 if [ "$ADDONS" == "1" ]
 then
-    for DIR in $ADDONS
+    for DIR in $ADDON_DIRS
     do
         echo "$DIR"
         COMMAND="$COMMAND --addon=$DIR"

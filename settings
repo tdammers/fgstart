@@ -27,7 +27,7 @@ DEFAULT_CONFIG_XML=$HOME/flightgear/config/config.xml
 MULTIMON_CONFIG_XML=$HOME/flightgear/config/multimon1.xml
 
 # Paths to addons to be loaded
-ADDONS=/home/tobias/flightgear/addons/*
+ADDON_DIRS=/home/tobias/flightgear/addons/*
 
 # Username for SimBrief import
 SIMBRIEF_USER=tdammers
