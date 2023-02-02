@@ -1,5 +1,5 @@
 # Additional shell commands to run before launching FGFS
-PRERUN=jscal.sh
+PRERUN=fgstart-prerun
 
 # Custom options to append to `fgfs` command
 CUSTOM_OPTIONS=--allow-nasal-read=/home/tobias/flightgear/joystick-conf
@@ -24,7 +24,7 @@ AIRCRAFT_PATHS="\
 
 # XML configuration files
 DEFAULT_CONFIG_XML=$HOME/flightgear/config/config.xml
-MULTIMON_CONFIG_XML=$HOME/flightgear/config/multimon1.xml
+MULTIMON_CONFIG_XML=$HOME/flightgear/config/multimon.xml
 
 # Paths to addons to be loaded
 ADDON_DIRS=/home/tobias/flightgear/addons/*

@@ -29,6 +29,7 @@ CUSTOM_OPTIONS=""
 AIRFRAME=""
 ACTYPE=""
 TIMEOFDAY="clock"
+FLEETDIR=$HOME/.config/fgstart/fleet
 
 ANTIALIAS=1
 REMBRANDT=0
@@ -50,6 +51,9 @@ do
             ;;
         --show-aircraft)
             ACTION=show-aircraft
+            ;;
+        --show-fleet)
+            ACTION=show-fleet
             ;;
         --airport)
             shift
@@ -162,15 +166,40 @@ do
     shift
 done
 
+if [ "$ACTION" == 'show-fleet' ]
+then
+    echo "--- AIRFRAMES ---"
+    echo "+--------+----------+-----+--------------------------------+----------------------------------------------------+"
+    for AIRFRAME_FILE in "$FLEETDIR/airframes/"*
+    do
+        (
+            . "$AIRFRAME_FILE"
+            ACTYPE_FILE=$FLEETDIR/types/$ACTYPE
+            if [[ -e "$ACTYPE_FILE" ]]
+            then
+                . "$ACTYPE_FILE"
+            fi
+            printf "| %-6s | %-8s | %-3s | %-30s | %-50s |\n" \
+                $(basename "$AIRFRAME_FILE") \
+                "$ACTYPE" \
+                "$AIRLINE" \
+                "$AIRCRAFT" \
+                "$AIRFRAME_COMMENT"
+        )
+    done
+    echo "+--------+----------+-----+--------------------------------+----------------------------------------------------+"
+    exit
+fi
+
 # SIMBRIEF
 if [ "$SIMBRIEF" == "1" ]
 then
     SIMBRIEF_FILENAME=$HOME/tmp/simbrief.xml
     (curl "https://www.simbrief.com/api/xml.fetcher.php?username=$SIMBRIEF_USER" || exit -1) > "$SIMBRIEF_FILENAME"
+    AIRPORT=$(xmlstarlet sel -t -m '/' -v '/OFP/origin/icao_code' "$SIMBRIEF_FILENAME")
     CALLSIGN=$(xmlstarlet sel -t -m '/' -v '/OFP/atc/callsign' "$SIMBRIEF_FILENAME")
     AIRFRAME=$(xmlstarlet sel -t -m '/' -v '/OFP/aircraft/reg' "$SIMBRIEF_FILENAME")
     ACTYPE=$(xmlstarlet sel -t -m '/' -v '/OFP/aircraft/icaocode' "$SIMBRIEF_FILENAME")
-    AIRPORT=$(xmlstarlet sel -t -m '/' -v '/OFP/origin/icao_code' "$SIMBRIEF_FILENAME")
 
     echo "--- SIMBRIEF ---"
     echo "CALLSIGN: $CALLSIGN"
@@ -182,7 +211,7 @@ fi
 # Resolve airframe
 if [ "$AIRFRAME" != "" ]
 then
-    AIRFRAME_FILE=$HOME/.config/fgstart/fleet/airframes/$AIRFRAME
+    AIRFRAME_FILE=$FLEETDIR/airframes/$AIRFRAME
     if [[ -e "$AIRFRAME_FILE" ]]
     then
         . "$AIRFRAME_FILE"
@@ -192,7 +221,7 @@ fi
 # Resolve type
 if [ "$ACTYPE" != "" ]
 then
-    ACTYPE_FILE=$HOME/.config/fgstart/fleet/types/$ACTYPE
+    ACTYPE_FILE=$FLEETDIR/types/$ACTYPE
     if [[ -e "$ACTYPE_FILE" ]]
     then
         . "$ACTYPE_FILE"
@@ -217,6 +246,8 @@ if [ "$TELNET" == "1" ]
 then
     COMMAND="$COMMAND --telnet=10001 --allow-nasal-from-sockets"
 fi
+
+COMMAND="$COMMAND --allow-nasal-read=/home/tobias/devel/broomer/kits/fgnasal"
 
 if [ "$USE_GDB" == "1" ]
 then
