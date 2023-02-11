@@ -158,6 +158,10 @@ do
             TELNET="1"
             ;;
 
+        --help|-h)
+            ACTION=help
+            ;;
+
         *)
             echo "Invalid option $1" >&2
             exit 1
@@ -165,6 +169,73 @@ do
     esac
     shift
 done
+
+if [ "$ACTION" == 'help' ]
+then
+    cat <<EOT
+fgstart - a command-line launcher for FlightGear
+
+Copyright (c) 2020-2023 Tobias Dammers
+
+--help,-h             Display this help
+--addons              Enable addons
+--no-addons           Disable addons
+--aircraft AIRCRAFT   Select aircraft model AIRCRAFT
+--airframe NAME       Select airframe NAME from fleet database. This may also
+                      set the aircraft model, callsign, and parking position.
+--airport ICAO        Spawn at airport ICAO
+--antialias SETTING   Set antialiasing policy. Possible settings are:
+                        2, 3, 4: let FlightGear handle antialiasing (2x/3x/4x)
+                        off: Turn off all antialiasing
+                        lo: Low antialiasing and no anisotropic filtering
+                        med: Medium antialiasing and anisotropic filtering
+                        hi: Best antialising and anisotropic filtering
+--callsign CALLSIGN   Set the callsign.
+--compositor          Enable Compositor in FlightGear versions that support it
+                      and require explicit enabling.
+--dump                Do not launch FlightGear, but instead dump the command
+                      that would have been issued.
+--extra-scenery       Enable extra scenery (as per settings)
+--no-extra-scenery
+--fgfs PATH           Use fgfs binary found at PATH
+--gdb                 Run fgfs through gdb for debugging purposes.
+--hdr                 Enable HDR
+--headtrack           Enable OpenTrack head tracking (port 5542)
+--log-level LEVEL     Set fgfs log level
+--mpserver NUM        Connect to multiplayer server NUM
+--multimon            Load multi-monitor configuration
+--multithreaded       Set default multithreading options
+--multithreaded2      Set aggressive multithreading options
+--parkpos POS         Spawn at parking position POS
+--photoscenery        Enable photoscenery
+--rembrandt           Enable Rembrandt
+--runway RUNWAY       Spawn on runway RUNWAY
+--scenery SETTING     Select scenery to load by SETTING. Possible values:
+                        terragit - use TerraGIT
+                        terrasync - use TerraSync and enable automatic
+                                    downloads
+                        terrasync-existing - use TerraSync, but disable
+                                             automatic downloads
+                        1.0 - use World Scenery 1.0
+                        none - do not use any particular scenery
+--show-aircraft       Show available aircraft models (to be passed to
+                      --aircraft).
+--show-fleet          List available airframes in your fleet.
+--simbrief            Spawn at appropriate startup location, and with the
+                      selected airframe for your current SimBrief flight plan.
+                      For this to work, the tail number selected in SimBrief
+                      must be available in your fleet.
+--singlethreaded      Disable multi-threading.
+--telnet              Open a telnet server on port 10001 and allow nasal
+                      through it.
+--time TIME           Select time setting for fgfs
+--type TYPE           Select aircraft type TYPE as per your fleet. This is
+                      different from --aircraft, which selects the aircraft
+                      model as it is named in FlightGear; --type selects by
+                      whichever name is found in your fleet.
+EOT
+exit
+fi
 
 if [ "$ACTION" == 'show-fleet' ]
 then
