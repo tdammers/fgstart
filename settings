@@ -1,8 +1,11 @@
 # Additional shell commands to run before launching FGFS
-PRERUN=fgstart-prerun
+PRERUN=~/.config/fgstart/prerun.sh
 
 # Custom options to append to `fgfs` command
-CUSTOM_OPTIONS=--allow-nasal-read=/home/tobias/flightgear/joystick-conf
+## Allow reading nasal from joystick configuration
+CUSTOM_OPTIONS="$CUSTOM_OPTIONS --allow-nasal-read=$HOME/flightgear/joystick-conf"
+## Allow reading boostrap nasal from broomer
+CUSTOM_OPTIONS="$CUSTOM_OPTIONS --allow-nasal-read=$HOME/devel/broomer/kits/fgnasal"
 
 # Locations of custom scenery
 CUSTOM_SCENERY_PATHS="/home/tobias/flightgear/fgdata-standalone/Navaids /home/tobias/flightgear/fgdata-standalone/Scenery/*"
@@ -31,3 +34,5 @@ ADDON_DIRS=/home/tobias/flightgear/addons/*
 
 # Username for SimBrief import
 SIMBRIEF_USER=tdammers
+
+# vim: ft=sh

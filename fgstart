@@ -247,8 +247,6 @@ then
     COMMAND="$COMMAND --telnet=10001 --allow-nasal-from-sockets"
 fi
 
-COMMAND="$COMMAND --allow-nasal-read=/home/tobias/devel/broomer/kits/fgnasal"
-
 if [ "$USE_GDB" == "1" ]
 then
     COMMAND="gdb -q -n -batch -ex 'handle SIGTSTP nostop' -ex 'handle SIGCONT nostop' -ex 'handle SIGHUP nostop nopass' -ex 'handle SIGPIPE nostop' -ex 'handle 32 pass nostop noprint' -ex r -ex 'thread apply all bt' -ex where --args $COMMAND"
