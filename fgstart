@@ -21,6 +21,7 @@ ADDONS="1"
 THREADING=MULTI
 FGFS=fgfs
 LOG_LEVEL=
+LOG_CLASS=
 USE_GDB=""
 OPENTRACK=""
 TELNET=""
@@ -30,6 +31,7 @@ AIRFRAME=""
 ACTYPE=""
 TIMEOFDAY="clock"
 FLEETDIR=$HOME/.config/fgstart/fleet
+LIVERY=""
 
 ANTIALIAS=1
 REMBRANDT=0
@@ -146,10 +148,15 @@ do
             LOG_LEVEL="$1"
             ;;
 
+        --log-class)
+            shift
+            LOG_CLASS="$1"
+            ;;
+
         --gdb)
             USE_GDB="1"
             ;;
-        
+
         --headtrack)
             OPENTRACK="1"
             ;;
@@ -240,7 +247,7 @@ fi
 if [ "$ACTION" == 'show-fleet' ]
 then
     echo "--- AIRFRAMES ---"
-    echo "+--------+----------+-----+--------------------------------+----------------------------------------------------+"
+    echo "+--------+----------+-----+--------------------------------+--------------------------------------------------------------+"
     for AIRFRAME_FILE in "$FLEETDIR/airframes/"*
     do
         (
@@ -250,15 +257,30 @@ then
             then
                 . "$ACTYPE_FILE"
             fi
-            printf "| %-6s | %-8s | %-3s | %-30s | %-50s |\n" \
+
+            COMMENT=""
+            if [ "$AIRFRAME_COMMENT" != "" ]
+            then
+                COMMENT="$AIRFRAME_COMMENT"
+            fi
+            if [ "$LIVERY" != "" ]
+            then
+                if [ "$COMMENT" != "" ]
+                then
+                    COMMENT="$COMMENT [$LIVERY]"
+                else
+                    COMMENT="[$LIVERY]"
+                fi
+            fi
+            printf "| %-6s | %-8s | %-3s | %-30s | %-60s |\n" \
                 $(basename "$AIRFRAME_FILE") \
                 "$ACTYPE" \
                 "$AIRLINE" \
                 "$AIRCRAFT" \
-                "$AIRFRAME_COMMENT"
+                "$COMMENT"
         )
     done
-    echo "+--------+----------+-----+--------------------------------+----------------------------------------------------+"
+    echo "+--------+----------+-----+--------------------------------+--------------------------------------------------------------+"
     exit
 fi
 
@@ -330,6 +352,11 @@ then
     COMMAND="$COMMAND --log-level=$LOG_LEVEL"
 fi
 
+if [ "$LOG_CLASS" != "" ]
+then
+    COMMAND="$COMMAND --log-class=$LOG_CLASS"
+fi
+
 if [ "$ADDONS" == "1" ]
 then
     for DIR in $ADDON_DIRS
@@ -396,12 +423,6 @@ esac
 SCENERY_PATHS="$(echo "$SCENERY_PATHS" | sed -e 's/^://')"
 
 COMMAND="$COMMAND --fg-scenery=$SCENERY_PATHS"
-
-if [ "$HDR" == "1" ]
-then
-    COMMAND="$COMMAND --compositor=/Compositor/HDR/hdr"
-fi
-
 
 if [ "$ACTION" != "show-aircraft" ]
 then
@@ -559,6 +580,13 @@ then
         COMMAND="$COMMAND --prop:bool:/sim/rendering/als/shadows/enabled=true"
     fi
 
+    if [ "$HDR" == "1" ]
+    then
+        COMMAND="$COMMAND --compositor=/Compositor/HDR/hdr"
+    else
+        COMMAND="$COMMAND --compositor=/Compositor/Classic/classic"
+    fi
+
     # tweak some rendering settings
     COMMAND="$COMMAND --prop:/sim/rendering/max-paged-lod=200 --prop:/sim/rendering/plod-minimum-expiry-time-secs=30"
     COMMAND="$COMMAND --prop:int:/sim/rendering/shadows/map-size=8192"
@@ -572,7 +600,7 @@ then
         COMMAND="$COMMAND --airport=$AIRPORT"
         if [ "$PARKPOS" != "" ]
         then
-            COMMAND="$COMMAND --parkpos=$PARKPOS"
+            COMMAND="$COMMAND --parkpos='$PARKPOS'"
         elif [ "$RUNWAY" != "" ]
         then
             COMMAND="$COMMAND --runway=$RUNWAY"
@@ -590,6 +618,11 @@ then
     then
         COMMAND="$COMMAND --multiplay=out,10,5000,$MPSERVER --multiplay=in,10,,5000"
     fi
+
+    if [ "$LIVERY" != "" ]
+    then
+        COMMAND="$COMMAND --prop:/sim/model/livery/preselect='$LIVERY'"
+    fi
 fi
 
 COMMAND="$COMMAND --config=$DEFAULT_CONFIG_XML"
@@ -600,16 +633,18 @@ fi
 
 COMMAND="$COMMAND $FG_EXTRA_OPTS"
 
+ICAO_TYPE=$(echo "$ACTYPE" | cut -c 1-4)
+
 case "$ACTION" in
     dump)
         echo "$COMMAND"
         ;;
     run)
-        $PRERUN
-        $COMMAND
+        eval "$PRERUN"
+        eval "$COMMAND"
         ;;
     show-aircraft)
-        $COMMAND --show-aircraft
+        eval "$COMMAND --show-aircraft"
         ;;
     *)
         echo "invalid command: $COMMAND"
