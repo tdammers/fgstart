@@ -336,6 +336,9 @@ COMMAND="$FGFS \
             --enable-ai-models \
             --prop:/sim/rendering/use-vbos=true"
 
+# Workaround to make canvas and properties over HTTP work reliably
+COMMAND="$COMMAND --prop:/sim/http/property-websocket/update-interval-secs=0"
+
 # if [ "$FGNEXT" == "1" ]
 # then
 #     COMMAND="$COMMAND --composite-viewer=0 "
