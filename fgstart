@@ -32,6 +32,7 @@ ACTYPE=""
 TIMEOFDAY="clock"
 FLEETDIR=$HOME/.config/fgstart/fleet
 LIVERY=""
+HOPPIE_MCDU=""
 
 ANTIALIAS=1
 REMBRANDT=0
@@ -165,6 +166,10 @@ do
             TELNET="1"
             ;;
 
+        --hoppie-mcdu)
+            HOPPIE_MCDU="1"
+            ;;
+
         --help|-h)
             ACTION=help
             ;;
@@ -232,6 +237,7 @@ Copyright (c) 2020-2023 Tobias Dammers
                       selected airframe for your current SimBrief flight plan.
                       For this to work, the tail number selected in SimBrief
                       must be available in your fleet.
+--hoppie-mcdu         Starts the hoppie-mcdu program in a separate terminal.
 --singlethreaded      Disable multi-threading.
 --telnet              Open a telnet server on port 10001 and allow nasal
                       through it.
@@ -635,12 +641,18 @@ COMMAND="$COMMAND $FG_EXTRA_OPTS"
 
 ICAO_TYPE=$(echo "$ACTYPE" | cut -c 1-4)
 
+HOPPIE_COMMAND="hoppie-mcdu --callsign $CALLSIGN -t $ICAO_TYPE"
+
 case "$ACTION" in
     dump)
         echo "$COMMAND"
         ;;
     run)
         eval "$PRERUN"
+        if [ "$HOPPIE_MCDU" != "" ]
+        then
+            urxvt -e $HOPPIE_COMMAND & disown
+        fi
         eval "$COMMAND"
         ;;
     show-aircraft)
