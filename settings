@@ -35,4 +35,7 @@ ADDON_DIRS=/home/tobias/flightgear/addons/*
 # Username for SimBrief import
 SIMBRIEF_USER=tdammers
 
+# Always use best AA
+ANTIALIAS=hi
+
 # vim: ft=sh
