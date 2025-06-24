@@ -19,6 +19,12 @@ SCENERY_1_PATH=$HOME/flightgear/fgdata-standalone/fg-scenery-1.0
 # Path to photoscenery
 PHOTOSCENERY_DIR=$HOME/flightgear/photoscenery
 
+# Path to Julia photoscenery
+JULIA_PHOTOSCENERY_DIR=$HOME/flightgear/julia-photoscenery/Orthophotos
+
+# Path to Julia photoscenery generator
+JULIA_PHOTOSCENERY_PROGRAM_PATH=$HOME/flightgear/julia-photoscenery/Photoscenary
+
 # Paths to search for aircraft models
 AIRCRAFT_PATHS="\
     $HOME/flightgear/fgdata-standalone/Aircraft \
