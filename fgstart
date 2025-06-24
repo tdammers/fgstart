@@ -58,6 +58,10 @@ do
         --show-fleet)
             ACTION=show-fleet
             ;;
+        --sort-by)
+            shift
+            SHOW_FLEET_SORT_KEY="$1"
+            ;;
         --airport)
             shift
             AIRPORT="$1"
@@ -91,6 +95,9 @@ do
             ;;
         --photoscenery)
             PHOTOSCENERY=1
+            ;;
+        --julia)
+            JULIA_PHOTOSCENERY=1
             ;;
         --hdr)
             HDR=1
@@ -198,6 +205,8 @@ Copyright (c) 2020-2023 Tobias Dammers
 --airport ICAO        Spawn at airport ICAO
 --antialias SETTING   Set antialiasing policy. Possible settings are:
                         2, 3, 4: let FlightGear handle antialiasing (2x/3x/4x)
+                        fxaa: FXAA antialiasing in HDR mode (--hdr)
+                        smaa: SMAA antialiasing in HDR mode (--hdr)
                         off: Turn off all antialiasing
                         lo: Low antialiasing and no anisotropic filtering
                         med: Medium antialiasing and anisotropic filtering
@@ -232,7 +241,10 @@ Copyright (c) 2020-2023 Tobias Dammers
                         none - do not use any particular scenery
 --show-aircraft       Show available aircraft models (to be passed to
                       --aircraft).
---show-fleet          List available airframes in your fleet.
+--show-fleet          List available airframes in your fleet. If --type is
+                      given, show only airframes of that type.
+--sort-by KEY         Sort the output of --show-fleet by KEY. KEY may be one of
+                      type, typename, airline, or callsign (the default).
 --simbrief            Spawn at appropriate startup location, and with the
                       selected airframe for your current SimBrief flight plan.
                       For this to work, the tail number selected in SimBrief
@@ -252,6 +264,23 @@ fi
 
 if [ "$ACTION" == 'show-fleet' ]
 then
+    FILTER_ACTYPE="$ACTYPE"
+    SORTKEY=1
+    case "$SHOW_FLEET_SORT_KEY" in
+        type)
+            SORTKEY=3
+            ;;
+        typename)
+            SORTKEY=5
+            ;;
+        airline)
+            SORTKEY=4
+            ;;
+        *)
+            SORTKEY=2
+            ;;
+    esac
+
     echo "--- AIRFRAMES ---"
     echo "+--------+----------+-----+--------------------------------+--------------------------------------------------------------+"
     for AIRFRAME_FILE in "$FLEETDIR/airframes/"*
@@ -278,14 +307,20 @@ then
                     COMMENT="[$LIVERY]"
                 fi
             fi
-            printf "| %-6s | %-8s | %-3s | %-30s | %-60s |\n" \
-                $(basename "$AIRFRAME_FILE") \
-                "$ACTYPE" \
-                "$AIRLINE" \
-                "$AIRCRAFT" \
-                "$COMMENT"
+            AIRLINE_DISPLAY="ZZZ"
+            if [ "$AIRLINE" != "" ]; then
+                AIRLINE_DISPLAY="$AIRLINE"
+            fi
+            if [ "$FILTER_ACTYPE" == "" ] || [ "$FILTER_ACTYPE" == "$ACTYPE" ]; then
+                printf "| %-6s | %-8s | %-3s | %-30s | %-60s |\n" \
+                    $(basename "$AIRFRAME_FILE") \
+                    "$ACTYPE" \
+                    "$AIRLINE_DISPLAY" \
+                    "$AIRCRAFT" \
+                    "$COMMENT"
+            fi
         )
-    done
+    done | sort -t \| -k$SORTKEY
     echo "+--------+----------+-----+--------------------------------+--------------------------------------------------------------+"
     exit
 fi
@@ -346,7 +381,14 @@ COMMAND="$COMMAND --prop:/sim/http/property-websocket/update-interval-secs=0"
 
 if [ "$TELNET" == "1" ]
 then
-    COMMAND="$COMMAND --telnet=10001 --allow-nasal-from-sockets"
+    # COMMAND="$COMMAND --telnet=10001 --allow-nasal-from-sockets"
+    COMMAND="$COMMAND --telnet=telnet,bi,1000,localhost,10001,unused --allow-nasal-from-sockets"
+fi
+
+if [ "$JULIA_PHOTOSCENERY" == "1" ]
+then
+    COMMAND="$COMMAND --telnet=5000"
+    # JULIA_COMMAND="julia -t 4 photoscenary.jl --connect '127.0.0.1:5000'"
 fi
 
 if [ "$USE_GDB" == "1" ]
@@ -383,6 +425,11 @@ fi
 if [ "$PHOTOSCENERY" == "1" ]
 then
     SCENERY_PATHS="$SCENERY_PATHS:$PHOTOSCENERY_DIR"
+fi
+
+if [ "$JULIA_PHOTOSCENERY" == "1" ]
+then
+    SCENERY_PATHS="$SCENERY_PATHS:$JULIA_PHOTOSCENERY_DIR"
 fi
 
 if [ "$EXTRA_SCENERY" == "1" ]
@@ -557,6 +604,18 @@ then
             export __GL_FSAA_MODE=0
             export __GL_LOG_MAX_ANISO=0
             ;;
+        fxaa)
+            COMMAND="$COMMAND \
+                    --prop:/sim/rendering/hdr/antialiasing-technique=1"
+            export __GL_FSAA_MODE=0
+            export __GL_LOG_MAX_ANISO=0
+            ;;
+        smaa)
+            COMMAND="$COMMAND \
+                    --prop:/sim/rendering/hdr/antialiasing-technique=2"
+            export __GL_FSAA_MODE=0
+            export __GL_LOG_MAX_ANISO=0
+            ;;
         *)
             COMMAND="$COMMAND \
                     --prop:/sim/rendering/multi-sample-buffers=false \
@@ -652,6 +711,15 @@ case "$ACTION" in
         ;;
     run)
         eval "$PRERUN"
+        if [ "$JULIA_COMMAND" != "" ]
+        then
+            (
+                sleep 30
+                echo "Julia command: $JULIA_COMMAND"
+                cd "$JULIA_PHOTOSCENERY_PROGRAM_PATH"
+                urxvt -e $JULIA_COMMAND & disown
+            ) &
+        fi
         if [ "$HOPPIE_MCDU" != "" ]
         then
             urxvt -e $HOPPIE_COMMAND & disown
